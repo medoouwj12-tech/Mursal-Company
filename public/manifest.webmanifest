@@ -1,1 +1,20 @@
-{"name":"مرسال للخدمات المتكاملة","short_name":"مرسال","description":"إدارة الطلبات والتوصيل","start_url":"/","display":"standalone","background_color":"#f6f5f2","theme_color":"#f59e0b","lang":"ar","dir":"rtl","icons":[{"src":"/icon.svg","sizes":"any 192x192 512x512","type":"image/svg+xml","purpose":"any maskable"}]}
+{
+  "name": "مرسال للخدمات المتكاملة",
+  "short_name": "مرسال",
+  "description": "إدارة الطلبات والتوصيل",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1b2b",
+  "theme_color": "#f59e0b",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
