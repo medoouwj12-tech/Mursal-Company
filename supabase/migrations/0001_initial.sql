@@ -88,8 +88,6 @@ create table public.push_subscriptions (
   created_at timestamptz not null default now()
 );
 alter table public.push_subscriptions enable row level security;
-create policy push_subscriptions_owner on public.push_subscriptions for select to authenticated using (user_id=auth.uid() or public.is_admin());
-create policy push_subscriptions_admin on public.push_subscriptions for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
 create table public.app_settings (
   key text primary key,
@@ -113,6 +111,9 @@ as $$ select role from public.profiles where id = auth.uid() and is_active $$;
 create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path = public
 as $$ select coalesce(public.current_role() = 'admin', false) $$;
+
+create policy push_subscriptions_owner on public.push_subscriptions for select to authenticated using (user_id=auth.uid() or public.is_admin());
+create policy push_subscriptions_admin on public.push_subscriptions for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
 -- Atomic claim: conditional UPDATE serializes concurrent claims on the same row.
 create or replace function public.claim_order(p_order_id uuid)
