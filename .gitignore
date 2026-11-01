@@ -5,3 +5,7 @@ node_modules
 coverage
 *.tsbuildinfo
 supabase/.temp
+
+.vercel
+.env*
+!.env.example
