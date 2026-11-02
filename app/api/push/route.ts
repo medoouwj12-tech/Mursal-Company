@@ -16,7 +16,8 @@ function vapid(){
 async function sendToUsers(admin:SupabaseClient,ids:string[],title:string,body:string,orderId?:string){
   const result={subscribers:0,sent:0,failed:0};
   if(!ids.length)return result;
-  const {data:subs}=await admin.from('push_subscriptions').select('user_id,endpoint,subscription').in('user_id',ids);
+  const {data:subs,error}=await admin.from('push_subscriptions').select('user_id,endpoint,subscription').in('user_id',ids);
+  if(error)throw error;
   result.subscribers=subs?.length||0;
   if(!subs?.length)return result;
   vapid();
