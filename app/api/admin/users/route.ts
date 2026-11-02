@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       if (/already/i.test(error.message)) return fail('اسم المستخدم مستخدم بالفعل، اختار اسمًا آخر');
       throw error;
     }
-    const { error: pe } = await admin.from('profiles').insert({ id: data.user.id, username, full_name: name, role: b.role, phone: b.phone || null, is_active: true, is_available: false });
+    const { error: pe } = await admin.from('profiles').insert({ id: data.user.id, username, full_name: name, role: b.role, phone: b.phone || null, is_active: true, is_available: true });
     if (pe) {
       await admin.auth.admin.deleteUser(data.user.id);
       throw pe;
