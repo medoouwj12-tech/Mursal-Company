@@ -54,6 +54,10 @@ export async function POST(req:NextRequest){
       if(!o)throw new Error('الطلب غير موجود');
       const service=(o as any).service?.name||'خدمة';
       if(b.action==='new_order'){
+        if(o.courier_id){
+          const result=await sendToUsers(admin,[o.courier_id],'طلب جديد مخصص لك',`${service} · ${o.area}${o.priority==='urgent'?' · مستعجل':''}`,o.id);
+          return NextResponse.json({ok:true,...result});
+        }
         const {data:users}=await admin.from('profiles').select('id').eq('role','courier').eq('is_available',true).eq('is_active',true);
         const result=await sendToUsers(admin,(users||[]).map(x=>x.id),'طلب جديد على مرسال',`${service} · ${o.area}${o.priority==='urgent'?' · مستعجل':''}`,o.id);
         return NextResponse.json({ok:true,...result});
