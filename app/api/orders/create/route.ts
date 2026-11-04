@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const { data: authData, error: authError } = await auth.auth.getUser(token);
     if (authError || !authData.user) return fail('جلسة الدخول غير صالحة', 401);
     const { data: actor, error: actorError } = await admin.from('profiles').select('role,is_active').eq('id', authData.user.id).single();
-    if (actorError || actor?.role !== 'call_center' || !actor.is_active) return fail('إنشاء الطلب متاح لموظف الكول سنتر فقط', 403);
+    if (actorError || !actor?.is_active || !['admin', 'call_center'].includes(actor.role)) return fail('إنشاء الطلب متاح لموظف الكول سنتر أو المدير فقط', 403);
 
     const body = await req.json();
     const phone = String(body.customer_phone || '').replace(/\s/g, '');
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     const { data: created, error: insertError } = await admin.from('orders').insert(order).select('*').single();
     if (insertError) throw insertError;
     if (courier) {
-      const { error } = await admin.from('order_events').insert({ order_id: created.id, actor_id: authData.user.id, event_type: 'assigned', to_status: 'accepted', details: { courier_name: courier.full_name, source: 'call_center_assignment' } });
+      const { error } = await admin.from('order_events').insert({ order_id: created.id, actor_id: authData.user.id, event_type: 'assigned', to_status: 'accepted', details: { courier_name: courier.full_name, source: `${actor.role}_assignment` } });
       if (error) console.error('Could not record courier assignment event:', error.message);
     }
     return NextResponse.json({ order: created, assigned_courier: courier?.full_name || null });
