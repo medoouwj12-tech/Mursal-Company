@@ -14,3 +14,4 @@ export type Order = {
   created_by:string; courier_id:string|null; created_at:string; accepted_at:string|null; delivered_at:string|null;
   cancel_reason:string|null; service?:{name:string}; creator?:{full_name:string}; courier?:{full_name:string};
 };
+export type OrderAttachment = {id:string;order_id:string;uploaded_by:string;object_path:string;file_name:string;mime_type:string;size_bytes:number;created_at:string};
