@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
     const { data: authData, error: authError } = await auth.auth.getUser(token);
     if (authError || !authData.user) return fail('جلسة الدخول غير صالحة', 401);
-    const { data: actor, error: actorError } = await admin.from('profiles').select('role,is_active').eq('id', authData.user.id).single();
+    const { data: actor, error: actorError } = await admin.from('profiles').select('role,is_active,branch').eq('id', authData.user.id).single();
     if (actorError || !actor?.is_active || !['admin', 'call_center'].includes(actor.role)) return fail('إنشاء الطلب متاح لموظف الكول سنتر أو المدير فقط', 403);
 
     const body = await req.json();
@@ -28,6 +28,8 @@ export async function POST(req: NextRequest) {
     const name = String(body.customer_name || '').trim();
     const serviceId = String(body.service_id || '');
     const courierId = body.courier_id ? String(body.courier_id) : null;
+    const branch = actor.role === 'call_center' ? actor.branch : String(body.branch || '');
+    if (!branch || !['bagour','ashmoun'].includes(branch)) return fail('اختار الفرع الصحيح للطلب');
     const amount = Number(body.collection_amount ?? 0);
     const fee = Number(body.delivery_fee ?? 0);
     if (name.length < 2) return fail('اسم العميل مطلوب');
@@ -45,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     let courier: { id: string; full_name: string } | null = null;
     if (courierId) {
-      const { data, error } = await admin.from('profiles').select('id,full_name').eq('id', courierId).eq('role', 'courier').eq('is_active', true).eq('is_available', true).maybeSingle();
+      const { data, error } = await admin.from('profiles').select('id,full_name').eq('id', courierId).eq('role', 'courier').eq('branch',branch).eq('is_active', true).eq('is_available', true).maybeSingle();
       if (error) throw error;
       if (!data) return fail('المندوب لم يعد متاحًا، حدّث القائمة أو اترك الطلب للمناديب المتاحين');
       const [{ data: setting, error: settingError }, { count, error: countError }] = await Promise.all([
@@ -65,6 +67,7 @@ export async function POST(req: NextRequest) {
       governorate: String(body.governorate).trim(),
       area: String(body.area).trim(),
       address: String(body.address).trim(),
+      branch,
       service_id: serviceId,
       details: String(body.details).trim(),
       source: body.source,

@@ -4,6 +4,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 export const runtime = 'nodejs';
 
 const ROLES = ['admin', 'call_center', 'courier'];
+const BRANCHES = ['bagour', 'ashmoun'];
 
 function clients() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL, service = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -43,6 +44,9 @@ export async function POST(req: NextRequest) {
     if (name.length < 2) return fail('الاسم مطلوب');
     if (password.length < 8) return fail('كلمة المرور 8 أحرف على الأقل');
     if (!ROLES.includes(b.role)) return fail('الدور غير صحيح');
+    const branch = b.role === 'admin' && !b.branch ? null : String(b.branch || '');
+    if (b.role !== 'admin' && !BRANCHES.includes(String(branch || ''))) return fail('اختار فرع المستخدم');
+    if (branch && !BRANCHES.includes(branch)) return fail('الفرع غير صحيح');
 
     const { data: exists } = await admin.from('profiles').select('id').eq('username', username).maybeSingle();
     if (exists) return fail('اسم المستخدم مستخدم بالفعل، اختار اسمًا آخر');
@@ -52,7 +56,7 @@ export async function POST(req: NextRequest) {
       if (/already/i.test(error.message)) return fail('اسم المستخدم مستخدم بالفعل، اختار اسمًا آخر');
       throw error;
     }
-    const { error: pe } = await admin.from('profiles').insert({ id: data.user.id, username, full_name: name, role: b.role, phone: b.phone || null, is_active: true, is_available: true });
+    const { error: pe } = await admin.from('profiles').insert({ id: data.user.id, username, full_name: name, role: b.role, branch, phone: b.phone || null, is_active: true, is_available: true });
     if (pe) {
       await admin.auth.admin.deleteUser(data.user.id);
       throw pe;
@@ -69,12 +73,15 @@ export async function PATCH(req: NextRequest) {
     const b = await req.json();
     if (!b.id) return fail('معرف المستخدم مطلوب');
 
-    const { data: target } = await admin.from('profiles').select('id,role,is_active,username').eq('id', b.id).single();
+    const { data: target } = await admin.from('profiles').select('id,role,is_active,username,branch').eq('id', b.id).single();
     if (!target) return fail('المستخدم غير موجود');
 
     const nextRole = 'role' in b ? b.role : target.role;
+    const nextBranch = 'branch' in b ? b.branch : target.branch;
     const nextActive = 'is_active' in b ? Boolean(b.is_active) : target.is_active;
     if (!ROLES.includes(nextRole)) return fail('الدور غير صحيح');
+    if (nextRole !== 'admin' && ('role' in b || 'branch' in b) && !BRANCHES.includes(String(nextBranch || ''))) return fail('اختار فرع المستخدم');
+    if (nextRole === 'admin' && nextBranch && !BRANCHES.includes(String(nextBranch))) return fail('الفرع غير صحيح');
     if (b.id === uid && (nextRole !== 'admin' || !nextActive)) return fail('مش مسموح تغيّر دور حسابك أو توقفه');
 
     const losingAdmin = target.role === 'admin' && target.is_active && (nextRole !== 'admin' || !nextActive);
@@ -87,7 +94,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const updates: Record<string, unknown> = {};
-    for (const k of ['full_name', 'phone', 'is_active', 'is_available']) if (k in b) updates[k] = b[k];
+    for (const k of ['full_name', 'phone', 'is_active', 'is_available','branch']) if (k in b) updates[k] = b[k];
     if ('role' in b) updates.role = nextRole;
     if (!nextActive) updates.is_available = false;
 

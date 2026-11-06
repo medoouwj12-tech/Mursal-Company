@@ -48,17 +48,18 @@ export async function POST(req:NextRequest){
       return NextResponse.json({ok:true,...result});
     }
     if(b.action==='new_order'||b.action==='order_updated'){
-      const {data:p}=await admin.from('profiles').select('role,is_active').eq('id',id).single();
+      const {data:p}=await admin.from('profiles').select('role,is_active,branch').eq('id',id).single();
       if(!p?.is_active||!['admin','call_center'].includes(p.role))throw new Error('غير مصرح');
-      const {data:o}=await admin.from('orders').select('id,area,priority,status,courier_id,service:services(name)').eq('id',b.order_id).single();
+      const {data:o}=await admin.from('orders').select('id,area,priority,status,courier_id,branch,service:services(name)').eq('id',b.order_id).single();
       if(!o)throw new Error('الطلب غير موجود');
+      if(p.role==='call_center'&&p.branch!==o.branch)throw new Error('لا يمكنك إرسال إشعار لطلب تابع لفرع آخر');
       const service=(o as any).service?.name||'خدمة';
       if(b.action==='new_order'){
         if(o.courier_id){
           const result=await sendToUsers(admin,[o.courier_id],'طلب جديد مخصص لك',`${service} · ${o.area}${o.priority==='urgent'?' · مستعجل':''}`,o.id);
           return NextResponse.json({ok:true,...result});
         }
-        const {data:users}=await admin.from('profiles').select('id').eq('role','courier').eq('is_available',true).eq('is_active',true);
+        const {data:users}=await admin.from('profiles').select('id').eq('role','courier').eq('branch',o.branch).eq('is_available',true).eq('is_active',true);
         const result=await sendToUsers(admin,(users||[]).map(x=>x.id),'طلب جديد على مرسال',`${service} · ${o.area}${o.priority==='urgent'?' · مستعجل':''}`,o.id);
         return NextResponse.json({ok:true,...result});
       }

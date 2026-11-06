@@ -16,14 +16,16 @@ export async function GET(req: NextRequest) {
     const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
     const { data: authData, error: authError } = await auth.auth.getUser(token);
     if (authError || !authData.user) return NextResponse.json({ error: 'جلسة الدخول غير صالحة' }, { status: 401 });
-    const { data: actor, error: actorError } = await admin.from('profiles').select('role,is_active').eq('id', authData.user.id).single();
+    const { data: actor, error: actorError } = await admin.from('profiles').select('role,is_active,branch').eq('id', authData.user.id).single();
     if (actorError || !actor?.is_active || !['admin', 'call_center'].includes(actor.role)) {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 403 });
     }
 
-    const { data: couriers, error } = await admin.from('profiles').select('id,full_name').eq('role', 'courier').eq('is_active', true).eq('is_available', true).order('full_name');
+    const branch = actor.role === 'call_center' ? actor.branch : new URL(req.url).searchParams.get('branch');
+    if (!branch || !['bagour','ashmoun'].includes(branch)) return NextResponse.json({ error: 'اختار الفرع أولًا' }, { status: 400 });
+    const { data: couriers, error } = await admin.from('profiles').select('id,full_name').eq('role', 'courier').eq('branch',branch).eq('is_active', true).eq('is_available', true).order('full_name');
     if (error) throw error;
-    return NextResponse.json({ couriers: couriers || [] });
+    return NextResponse.json({ branch, couriers: couriers || [] });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'تعذر تحميل قائمة المناديب' }, { status: 500 });
   }
